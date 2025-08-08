@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 import { useTheme } from "@/contexts/theme-context"
 import { supabase } from "@/lib/supabase"
-import { Users, Calendar, Clock, DollarSign, Package, Menu, LogOut, Home, Settings, Moon, Sun } from "lucide-react"
+import { Users, Calendar, Clock, DollarSign, Package, Menu, LogOut, Home, Settings, Moon, Sun, StickyNote } from "lucide-react"
 
 const navigation = [
   { name: "Painel", href: "/dashboard", icon: Home },
@@ -18,6 +18,7 @@ const navigation = [
   { name: "Aulas Particulares", href: "/private-lessons", icon: Clock },
   { name: "Financeiro", href: "/finance", icon: DollarSign },
   { name: "Materiais", href: "/materials", icon: Package },
+  { name: "Anotações", href: "/notes", icon: StickyNote },
   { name: "Configurações", href: "/settings", icon: Settings },
 ]
 

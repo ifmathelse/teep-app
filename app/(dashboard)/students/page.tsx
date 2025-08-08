@@ -82,8 +82,6 @@ const badgeOptions = [
   { color: "orange", description: "Bola Laranja", bgColor: "bg-orange-500" },
   { color: "green", description: "Bola Verde", bgColor: "bg-green-500" },
   { color: "yellow", description: "Bola Amarela", bgColor: "bg-yellow-500" },
-  { color: "blue", description: "Bola Azul", bgColor: "bg-blue-500" },
-  { color: "purple", description: "Bola Roxa", bgColor: "bg-purple-500" },
 ]
 
 const feeTypes = [

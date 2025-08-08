@@ -256,6 +256,35 @@ export type Database = {
           user_id?: string
         }
       }
+      notes: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          category: string
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          category?: string
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          category?: string
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+      }
     }
   }
 }

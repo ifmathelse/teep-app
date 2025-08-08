@@ -18,11 +18,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "@/hooks/use-toast"
-import { Plus, Edit, Trash2, Clock, CalendarIcon, User } from "lucide-react"
+import { Plus, Edit, Trash2, Clock, CalendarIcon, User, Check, X } from "lucide-react"
 import { DatePicker, Calendar } from "@/components/ui/date-picker"
 
 interface PrivateLesson {
@@ -33,6 +33,7 @@ interface PrivateLesson {
   time: string
   type: "regular" | "makeup" | "trial"
   notes: string
+  status: "scheduled" | "completed" | "cancelled"
 }
 
 interface Student {
@@ -44,6 +45,12 @@ const lessonTypes = [
   { value: "regular", label: "Aula Regular", color: "bg-green-500" },
   { value: "makeup", label: "Aula de Reposição", color: "bg-blue-500" },
   { value: "trial", label: "Aula Experimental", color: "bg-purple-500" },
+]
+
+const lessonStatuses = [
+  { value: "scheduled", label: "Agendada", color: "bg-blue-500" },
+  { value: "completed", label: "Concluída", color: "bg-green-500" },
+  { value: "cancelled", label: "Cancelada", color: "bg-red-500" },
 ]
 
 export default function PrivateLessonsPage() {
@@ -183,6 +190,52 @@ export default function PrivateLessonsPage() {
     }
   }
 
+  const handleCompleteLesson = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("private_lessons")
+        .update({ status: "completed" })
+        .eq("id", id)
+
+      if (error) throw error
+      toast({
+        title: "Aula concluída!",
+        description: "A aula foi marcada como concluída.",
+      })
+      fetchLessons()
+    } catch (error) {
+      toast({
+        title: "Erro ao concluir aula",
+        description: "Não foi possível marcar a aula como concluída.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCancelLesson = async (id: string) => {
+    if (!confirm("Tem certeza que deseja cancelar esta aula?")) return
+
+    try {
+      const { error } = await supabase
+        .from("private_lessons")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+
+      if (error) throw error
+      toast({
+        title: "Aula cancelada!",
+        description: "A aula foi marcada como cancelada.",
+      })
+      fetchLessons()
+    } catch (error) {
+      toast({
+        title: "Erro ao cancelar aula",
+        description: "Não foi possível cancelar a aula.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleStudentChange = (studentId: string) => {
     const student = students.find((s) => s.id === studentId)
     setFormData({
@@ -200,19 +253,24 @@ export default function PrivateLessonsPage() {
     return `${year}-${month}-${day}`;
   }
   
-  const handleCalendarDateChange = (date: Date | undefined) => {
-    if (date) {
+  const handleCalendarDateChange = (dateString: string) => {
+    if (dateString) {
+      // Criar data usando os componentes da string para evitar problemas de fuso horário
+      const [year, month, day] = dateString.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
       setSelectedDate(date)
-      const dateString = formatDateToLocal(date)
-      setFormData({
-        ...formData,
-        date: dateString,
-      })
     }
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR")
+    // Evitar problemas de fuso horário ao criar a data
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    return date.toLocaleDateString("pt-BR", {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
   }
 
   const formatTime = (timeString: string) => {
@@ -221,6 +279,10 @@ export default function PrivateLessonsPage() {
 
   const getLessonTypeInfo = (type: string) => {
     return lessonTypes.find((t) => t.value === type) || lessonTypes[0]
+  }
+
+  const getLessonStatusInfo = (status: string) => {
+    return lessonStatuses.find((s) => s.value === status) || lessonStatuses[0]
   }
 
   const getSelectedDateLessons = () => {
@@ -298,31 +360,11 @@ export default function PrivateLessonsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Data</Label>
-                  <Popover modal={false}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.date ? new Date(formData.date).toLocaleDateString('pt-BR') : "Selecione a data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                    mode="single"
-                    selected={formData.date ? new Date(formData.date) : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        setFormData({ ...formData, date: formatDateToLocal(date) })
-                      }
-                    }}
-                    className="rounded-md border shadow-sm"
-                    captionLayout="dropdown"
-                    initialFocus
+                  <DatePicker
+                    value={formData.date}
+                    onChange={(date) => setFormData({ ...formData, date })}
+                    placeholder="Selecione a data"
                   />
-                    </PopoverContent>
-                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="time">Horário</Label>
@@ -395,8 +437,8 @@ export default function PrivateLessonsPage() {
           </CardHeader>
           <CardContent>
             <DatePicker
-              value={selectedDate ? formatDateToLocal(selectedDate) : ''}
-              onChange={(date) => handleCalendarDateChange(new Date(date))}
+              value={formatDateToLocal(selectedDate)}
+              onChange={handleCalendarDateChange}
               placeholder="Selecione a data"
             />
           </CardContent>
@@ -407,7 +449,11 @@ export default function PrivateLessonsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Aulas do Dia - {formatDate(formatDateToLocal(selectedDate))}
+              Aulas do Dia - {selectedDate.toLocaleDateString("pt-BR", {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              })}
             </CardTitle>
             <CardDescription>{getSelectedDateLessons().length} aula(s) agendada(s) para este dia</CardDescription>
           </CardHeader>
@@ -423,6 +469,7 @@ export default function PrivateLessonsPage() {
                   .sort((a, b) => a.time.localeCompare(b.time))
                   .map((lesson) => {
                     const typeInfo = getLessonTypeInfo(lesson.type)
+                    const statusInfo = getLessonStatusInfo(lesson.status)
                     return (
                       <div key={lesson.id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-2">
@@ -430,7 +477,10 @@ export default function PrivateLessonsPage() {
                             <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             <span className="font-medium">{lesson.student_name}</span>
                           </div>
-                          <Badge className={`${typeInfo.color} text-white`}>{typeInfo.label}</Badge>
+                          <div className="flex gap-2">
+                            <Badge className={`${typeInfo.color} text-white`}>{typeInfo.label}</Badge>
+                            <Badge className={`${statusInfo.color} text-white`}>{statusInfo.label}</Badge>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
                           <Clock className="w-4 h-4" />
@@ -438,6 +488,26 @@ export default function PrivateLessonsPage() {
                         </div>
                         {lesson.notes && <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{lesson.notes}</p>}
                         <div className="flex justify-end gap-2">
+                          {lesson.status === 'scheduled' && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleCompleteLesson(lesson.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Check className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleCancelLesson(lesson.id)}
+                                className="text-orange-600 hover:text-orange-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
                           <Button variant="outline" size="sm" onClick={() => handleEdit(lesson)}>
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -480,6 +550,7 @@ export default function PrivateLessonsPage() {
             <div className="space-y-3">
               {lessons.map((lesson) => {
                 const typeInfo = getLessonTypeInfo(lesson.type)
+                const statusInfo = getLessonStatusInfo(lesson.status)
                 return (
                   <div key={lesson.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-2">
@@ -495,6 +566,27 @@ export default function PrivateLessonsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className={`${typeInfo.color} text-white`}>{typeInfo.label}</Badge>
+                        <Badge className={`${statusInfo.color} text-white`}>{statusInfo.label}</Badge>
+                        {lesson.status === 'scheduled' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleCompleteLesson(lesson.id)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleCancelLesson(lesson.id)}
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => handleEdit(lesson)}>
                           <Edit className="w-4 h-4" />
                         </Button>

@@ -61,11 +61,11 @@ export default function DashboardPage() {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
 
-      // Fetch payments data
-      const { data: paymentsData } = await supabase.from("payments").select("amount, paid").eq("user_id", user.id)
+      // Fetch invoices data
+      const { data: invoicesData } = await supabase.from("invoices").select("amount, status").eq("user_id", user.id)
 
-      const monthlyRevenue = paymentsData?.filter((p) => p.paid).reduce((sum, p) => sum + p.amount, 0) || 0
-      const pendingPayments = paymentsData?.filter((p) => !p.paid).reduce((sum, p) => sum + p.amount, 0) || 0
+      const monthlyRevenue = invoicesData?.filter((inv) => inv.status === "paid").reduce((sum, inv) => sum + inv.amount, 0) || 0
+      const pendingPayments = invoicesData?.filter((inv) => inv.status === "pending" || inv.status === "overdue").reduce((sum, inv) => sum + inv.amount, 0) || 0
 
       setStats({
         totalStudents: studentsCount || 0,
@@ -208,22 +208,40 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Atividade Recente</CardTitle>
-            <CardDescription>Últimas atividades do sistema</CardDescription>
+            <CardDescription>Últimas atividades do aplicativo</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm">Sistema iniciado com sucesso</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm">Banco de dados conectado</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span className="text-sm">Pronto para uso!</span>
-              </div>
+              {stats.totalStudents > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">{stats.totalStudents} aluno(s) cadastrado(s)</span>
+                </div>
+              )}
+              {stats.totalClasses > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm">{stats.totalClasses} turma(s) ativa(s)</span>
+                </div>
+              )}
+              {stats.totalLessons > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm">{stats.totalLessons} aula(s) particular(es) agendada(s)</span>
+                </div>
+              )}
+              {stats.monthlyRevenue > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span className="text-sm">Receita mensal: {formatCurrency(stats.monthlyRevenue)}</span>
+                </div>
+              )}
+              {stats.totalStudents === 0 && stats.totalClasses === 0 && stats.totalLessons === 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  <span className="text-sm text-gray-500">Nenhuma atividade ainda. Comece cadastrando alunos!</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
